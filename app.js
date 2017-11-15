@@ -96,7 +96,6 @@ bot.dialog('Vendor Availability', [
         session.send('systemEntity is ' + systemEntity + ' and supplier entity is ' + supplierEntity);
         if (systemEntity && !supplierEntity) {
             // Supplier entity not detected, ask the user
-<<<<<<< HEAD
             session.dialogData.searchType = 'Supplier';
             session.dialogData.system = systemEntity.entity;
             builder.Prompts.text(session, 'Which supplier / vendor do you want to know about?');
@@ -132,20 +131,6 @@ bot.dialog('Vendor Availability', [
                 next({ response: results.response });
             break;
                         
-=======
-            // session.dialogData.searchType = 'city';
-            builder.Prompts.text(session, 'Which supplier / vendor do you want to know about?');
-        } else if (!systemEntity && supplierEntity) {
-            // System entity not detected, ask the user
-            // session.dialogData.searchType = 'airport';
-            builder.Prompts.text(session, 'in which system?');
-        } else if (!systemEntity && !supplierEntity) {
-            // no entities detected, ask user for inputs
-            builder.Prompts.text(session, 'Please enter supplier name and system name...');
-        } else {
-            // Both the entities are present. Go to the next step
-            next({ response: [systemEntity.entity, supplierEntity.entity] });
->>>>>>> ddb4808df8a2e3d156f1738dc45eec7e1ca96ff5
         }
     },
     function (session, results) {
@@ -154,11 +139,8 @@ bot.dialog('Vendor Availability', [
 
         var message = 'Looking for the setup...';
 
-<<<<<<< HEAD
         console.log("results: --------> ", results);
 
-=======
->>>>>>> ddb4808df8a2e3d156f1738dc45eec7e1ca96ff5
         session.send(message);
 
         var setup = Math.random() >= 0.5;
