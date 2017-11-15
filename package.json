@@ -1,0 +1,37 @@
+{
+  "name": "botbuilder-sample-luis",
+  "version": "1.0.0",
+  "description": "Bot Builder Sample - LUIS",
+  "scripts": {
+    "start": "nodejs app.js"
+  },
+  "author": "Microsoft Corp.",
+  "license": "MIT",
+  "keywords": [
+    "botbuilder",
+    "bots",
+    "chatbots",
+    "botbuilder-samples"
+  ],
+  "bugs": {
+    "url": "https://github.com/Microsoft/BotBuilder-Samples/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Microsoft/BotBuilder-Samples.git"
+  },
+  "dependencies": {
+    "bluebird": "^3.4.7",
+    "botbuilder": "^3.8.2",
+    "dotenv-extended": "^1.0.4",
+    "request": "^2.79.0",
+    "restify": "^4.3.0"
+  },
+  "devDependencies": {
+    "eslint-config-standard": "^10.2.1",
+    "eslint-plugin-import": "^2.8.0",
+    "eslint-plugin-node": "^5.2.1",
+    "eslint-plugin-promise": "^3.6.0",
+    "eslint-plugin-standard": "^3.0.1"
+  }
+}
