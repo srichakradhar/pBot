@@ -181,7 +181,7 @@ bot.dialog('Help', function (session) {
 });
 
 bot.dialog('Greeting', function (session) {
-    session.endDialog('Hi! Try asking me things like \'search hotels in Seattle\', \'search hotels near LAX airport\' or \'show me the reviews of The Bot Resort\'');
+    session.endDialog('Hi! Type \'help\' to know what you can ask.');
 }).triggerAction({
     matches: 'Greeting'
 });
