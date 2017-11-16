@@ -5,7 +5,7 @@ var builder = require('botbuilder');
 var restify = require('restify');
 var Store = require('./store');
 var spellService = require('./spell-service');
-var axios = require('axios');
+// var axios = require('axios');
 
 // Setup Restify Server
 var server = restify.createServer();
@@ -88,12 +88,11 @@ bot.recognizer(recognizer);
 
 bot.dialog('Vendor Availability', [
     function (session, args, next) {
-        session.send('Welcome to the Purchase helper! We are analyzing your message: \'%s\'', session.message.text);
+        session.sendTyping();
 
         // try extracting entities
         var systemEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'System');
         var supplierEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier');
-        session.send('systemEntity is ' + systemEntity + ' and supplier entity is ' + supplierEntity);
         if (systemEntity && !supplierEntity) {
             // Supplier entity not detected, ask the user
             session.dialogData.searchType = 'Supplier';
@@ -175,27 +174,16 @@ bot.dialog('Vendor Availability', [
     }
 });
 
-bot.dialog('ShowHotelsReviews', function (session, args) {
-    // retrieve hotel name from matched entities
-    var hotelEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Hotel');
-    if (hotelEntity) {
-        session.send('Looking for reviews of \'%s\'...', hotelEntity.entity);
-        Store.searchHotelReviews(hotelEntity.entity)
-            .then(function (reviews) {
-                var message = new builder.Message()
-                    .attachmentLayout(builder.AttachmentLayout.carousel)
-                    .attachments(reviews.map(reviewAsAttachment));
-                session.endDialog(message);
-            });
-    }
-}).triggerAction({
-    matches: 'ShowHotelsReviews'
-});
-
 bot.dialog('Help', function (session) {
     session.endDialog('Hi! Try asking me things like \'search hotels in Seattle\', \'search hotels near LAX airport\' or \'show me the reviews of The Bot Resort\'');
 }).triggerAction({
     matches: 'Help'
+});
+
+bot.dialog('Greeting', function (session) {
+    session.endDialog('Hi! Try asking me things like \'search hotels in Seattle\', \'search hotels near LAX airport\' or \'show me the reviews of The Bot Resort\'');
+}).triggerAction({
+    matches: 'Greeting'
 });
 
 // Spell Check
