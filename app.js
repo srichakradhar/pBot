@@ -23,6 +23,55 @@ var bot = new builder.UniversalBot(connector, function (session) {
     session.send('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
 });
 
+const PRForm = 'I need information on PR Form';
+const POStatus = 'What is the status of P0 for PR396316';
+const VendorStatus = 'Can you tell me if the supplier Poppulo is set up in SAP for NL location?';
+const Help = 'Help';
+
+var bot = new builder.UniversalBot(connector, [
+    function (session) {
+        session.send("Hello! Welcome to the Purchase Helper Bot.")
+        session.beginDialog('Help');
+        builder.Prompts.choice(session,
+            'You can ask me something like:',
+            [VendorStatus, PRForm, POStatus],
+            { listStyle: builder.ListStyle.button });
+    },
+    function (session, result) {
+        if (result.response) {
+            switch (result.response.entity) {
+                case POStatus:
+                    session.send('This functionality is not yet implemented! Try resetting your password.');
+                    session.reset();
+                    break;
+                case VendorStatus:
+                    session.beginDialog('Vendor Availability');
+                    break;
+                case PRForm:
+                    session.send('This functionality is not yet implemented! Try resetting your password.');
+                    session.reset();
+                    break;
+                case VendorStatus:
+                    session.beginDialog('Help');
+                    break;
+            }
+        } else {
+            session.send('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
+        }
+    },
+    function (session, result) {
+        if (result.resume) {
+            session.send('Well, I\'m corn-fused! 🤔 Can you please ask that again?');
+            builder.Prompts.choice(session,
+                'I can help you with queries regarding the PR form.',
+                [VendorStatus, PRForm, POStatus, Help],
+                { listStyle: builder.ListStyle.button });
+            session.reset();
+        }
+    }
+]);
+
+
 // You can provide your own model by specifing the 'LUIS_MODEL_URL' environment variable
 // This Url can be obtained by uploading or creating your model from the LUIS portal: https://www.luis.ai/
 var recognizer = new builder.LuisRecognizer(process.env.LUIS_MODEL_URL);
@@ -36,7 +85,7 @@ bot.recognizer(recognizer);
 //     proxy: 'http://1420100:TATA1Ch%40k.ree@proxy.tcs.com:8080',
 //     headers: {
 //       'User-Agent': 'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Safari/537.36.'
-//     },  
+//     },
 //     agentOptions: {
 //         secureProtocol: 'SSLv2_method'
 //     },
@@ -67,7 +116,7 @@ bot.recognizer(recognizer);
     // var request = {
     //     // `url` is the server URL that will be used for the request
     //     url: process.env.LUIS_MODEL_URL,
-    
+
     //     // `method` is the request method to be used when making the request
     //     method: 'get', // default
 
@@ -76,7 +125,7 @@ bot.recognizer(recognizer);
     //         port: 8080
     //     }
 
-    // }  
+    // }
     // // Make a request with LUIS url
     // axios.get(process.env.LUIS_MODEL_URL, request)
     // .then(function (response) {
@@ -129,7 +178,7 @@ bot.dialog('Vendor Availability', [
             default:
                 next({ response: results.response });
             break;
-                        
+
         }
     },
     function (session, results) {
@@ -174,14 +223,52 @@ bot.dialog('Vendor Availability', [
     }
 });
 
-bot.dialog('Help', function (session) {
-    session.endDialog('Hi! Try asking me things like \'search hotels in Seattle\', \'search hotels near LAX airport\' or \'show me the reviews of The Bot Resort\'');
-}).triggerAction({
+bot.dialog('Help', [
+    function (session) {
+        builder.Prompts.choice(session,
+            'Try asking me things like:',
+            [VendorStatus, PRForm, POStatus],
+            { listStyle: builder.ListStyle.button });
+    },
+    function (session, result) {
+        if (result.response) {
+            switch (result.response.entity) {
+                case POStatus:
+                    session.send('This functionality is not yet implemented! Try resetting your password.');
+                    session.reset();
+                    break;
+                case VendorStatus:
+                    session.beginDialog('Vendor Availability');
+                    break;
+                case PRForm:
+                    session.send('This functionality is not yet implemented! Try resetting your password.');
+                    session.reset();
+                    break;
+                case VendorStatus:
+                    session.beginDialog('Help');
+                    break;
+            }
+        } else {
+            session.send('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
+        }
+    },
+    function (session, result) {
+        if (result.resume) {
+            session.send('I\'m corn-fused! 🤔 Can you please ask that again?');
+            builder.Prompts.choice(session,
+                'I can help you with queries regarding the PR form.',
+                [VendorStatus, PRForm, POStatus],
+                { listStyle: builder.ListStyle.button });
+            session.reset();
+        }
+    }
+]).triggerAction({
     matches: 'Help'
 });
 
 bot.dialog('Greeting', function (session) {
-    session.endDialog('Hi! Type \'help\' to know what you can ask.');
+    session.send('Hi. I\'m a bot. I can help you with queries regarding the PR form.');
+    session.beginDialog('Help');
 }).triggerAction({
     matches: 'Greeting'
 });
