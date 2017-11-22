@@ -5,7 +5,7 @@ var builder = require('botbuilder');
 var restify = require('restify');
 var Store = require('./store');
 var spellService = require('./spell-service');
-// var axios = require('axios');
+var axios = require('axios');
 
 // Setup Restify Server
 var server = restify.createServer();
@@ -23,60 +23,53 @@ var bot = new builder.UniversalBot(connector, function (session) {
     session.send('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
 });
 
-const PRForm = 'I need information on PR Form';
-const POStatus = 'What is the status of P0 for PR396316';
-const VendorStatus = 'Can you tell me if the supplier Poppulo is set up in SAP for NL location?';
-const Help = 'Help';
-
-var bot = new builder.UniversalBot(connector, [
-    function (session) {
-        session.send("Hello! Welcome to the Purchase Helper Bot.")
-        session.beginDialog('Help');
-        builder.Prompts.choice(session,
-            'You can ask me something like:',
-            [VendorStatus, PRForm, POStatus],
-            { listStyle: builder.ListStyle.button });
-    },
-    function (session, result) {
-        if (result.response) {
-            switch (result.response.entity) {
-                case POStatus:
-                    session.send('This functionality is not yet implemented! Try resetting your password.');
-                    session.reset();
-                    break;
-                case VendorStatus:
-                    session.beginDialog('Vendor Availability');
-                    break;
-                case PRForm:
-                    session.send('This functionality is not yet implemented! Try resetting your password.');
-                    session.reset();
-                    break;
-                case VendorStatus:
-                    session.beginDialog('Help');
-                    break;
-            }
-        } else {
-            session.send('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
-        }
-    },
-    function (session, result) {
-        if (result.resume) {
-            session.send('Well, I\'m corn-fused! 🤔 Can you please ask that again?');
-            builder.Prompts.choice(session,
-                'I can help you with queries regarding the PR form.',
-                [VendorStatus, PRForm, POStatus, Help],
-                { listStyle: builder.ListStyle.button });
-            session.reset();
-        }
-    }
-]);
-
-
 // You can provide your own model by specifing the 'LUIS_MODEL_URL' environment variable
 // This Url can be obtained by uploading or creating your model from the LUIS portal: https://www.luis.ai/
 var recognizer = new builder.LuisRecognizer(process.env.LUIS_MODEL_URL);
 bot.recognizer(recognizer);
 
+const PRForm = 'I need information on PR Form';
+const POStatus = 'What is the status of P0 for PR396316';
+const EmailQuotes = 'Do we accept email quotes from suppliers?';
+const VendorStatus = 'Can you tell me if the supplier Poppulo is set up in SAP for NL location?';
+const Help = 'Help';
+var firstMessage = true;
+
+// Create a custom prompt
+var prompt = new builder.Prompt({ defaultRetryPrompt: "I'm sorry. I didn't recognize your search." })
+    .onRecognize(function (context, callback) {
+        // Call prompts recognizer
+        recognizer.recognize(context, function (err, result) {
+            // If the intent returned isn't the 'None' intent return it
+            // as the prompts response.
+            if (result && result.intent !== 'None') {
+                callback(null, result.score, result);
+            } else {
+                callback(null, 0.0);
+            }
+        });
+    });
+
+// Add your prompt as a dialog to your bot
+bot.dialog('myLuisPrompt', prompt);
+
+// Add function for calling your prompt from anywhere
+builder.Prompts.myLuisPrompt = function (session, prompt, options) {
+    var args = options || {};
+    args.prompt = prompt || options.prompt;
+    session.beginDialog('myLuisPrompt', args);
+}
+
+bot.on('conversationUpdate', (message) => {
+    if (message.membersAdded && firstMessage) {
+        const hello = new builder.Message()
+            .address(message.address)
+            .text("Hello! Welcome to the Purchase Helper Bot.");
+        bot.send(hello);
+        bot.beginDialog(message.address, 'Help');
+        firstMessage = false;
+    }
+});
 
 // const request = require('request');
 
@@ -135,86 +128,177 @@ bot.recognizer(recognizer);
     // console.log("===========********========= ERROR ===========********=========", error);
     // });
 
+// bot.dialog('Vendor Availability', [
+//     function (session, args, next) {
+//         session.sendTyping();
+
+//         // try extracting entities
+//         var systemEntity, supplierEntity, locationEntity;
+
+//         if(session.privateConversationData.hasOwnProperty('System'))
+//             systemEntity = session.privateConversationData.System
+//         else
+//             systemEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'System');
+//         if(session.privateConversationData.hasOwnProperty('Supplier'))
+//             supplierEntity = session.privateConversationData.Supplier
+//         else
+//             systemEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier');
+//         if(session.privateConversationData.hasOwnProperty('Location'))
+//             locationEntity = session.privateConversationData.Location;
+//         else
+//             systemEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Location');
+
+//         if (systemEntity && !supplierEntity) {
+//             // Supplier entity not detected, ask the user
+//             session.privateConversationData.searchType = 'Supplier';
+//             session.privateConversationData.system = systemEntity.entity;
+//             builder.Prompts.text(session, 'Which supplier / vendor do you want to know about?');
+//         } else if (!systemEntity && supplierEntity) {
+//             // System entity not detected, ask the user
+//             session.privateConversationData.searchType = 'System';
+//             session.privateConversationData.supplier = supplierEntity.entity;
+//             builder.Prompts.text(session, 'in which system?');
+//         } else if (!systemEntity && !supplierEntity) {
+//             // no entities detected, ask user for inputs
+//             session.privateConversationData.searchType = 'Supplier-n-System';
+//             builder.Prompts.text(session, 'Please enter supplier name and system name...');
+//         } else {
+//             // Both the entities are present. Check if country is given. Else ask for country.
+//             if(!locationEntity){
+//                 // list all the available countries
+//                 axios.post('10.138.89.49', {"system": systemEntity, "supplier": supplierEntity, "location": locationEntity})
+//                 .then(function (response) {
+//                     console.log(response);
+//                     session.send("Here you go! " + response);
+//                 })
+//                 .catch(function (error) {
+//                     console.log("===========********========= ERROR ===========********=========", error);
+//                 });
+
+//             }else{
+//                 // proceed with System, Supplier and Location
+//                 next({ response: [systemEntity.entity, supplierEntity.entity, locationEntity.entity], next: next });
+//             }
+//         }
+//     },
+//     function (session, results, next) {
+//         console.log("Response: ", results.response);
+
+//         switch(session.privateConversationData.searchType){
+//             case "Supplier":
+//                 next({ response: [session.privateConversationData.system, results.response] });
+//             break;
+//             case "System":
+//                 next({ response: [results.response, session.privateConversationData.supplier] });
+//             break;
+//             case "Supplier-n-System":
+//                 console.log("Response for supplier and system ----**######***--->", results.response);
+//                 next({ response: ["Poppulo", "SAP"] });
+//             break;
+//             default:
+//                 next({ response: results.response });
+//             break;
+
+//         }
+//     },
+//     function (session, results) {
+//         var system = results.response[0];
+//         var supplier = results.response[1];
+
+//         var message = 'Looking for the setup...';
+
+//         console.log("results: --------> ", results);
+
+//         session.send(message);
+
+//         var setup = Math.random() >= 0.5;
+
+//         if(setup)
+//             message = "Yes! Setup has been identified."
+//         else
+//             message = "There is no setup in " + system + " for " + supplier;
+//         session.send(message);
+//         session.endDialog();
+//     }
+// ])
+// .triggerAction({
+//     matches: 'Vendor Availability',
+//     onInterrupted: function (session) {
+//         session.send('Please provide supplier name and system name');
+//     }
+// });
+
 bot.dialog('Vendor Availability', [
     function (session, args, next) {
         session.sendTyping();
 
-        // try extracting entities
-        var systemEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'System');
-        var supplierEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier');
-        if (systemEntity && !supplierEntity) {
-            // Supplier entity not detected, ask the user
-            session.dialogData.searchType = 'Supplier';
-            session.dialogData.system = systemEntity.entity;
-            builder.Prompts.text(session, 'Which supplier / vendor do you want to know about?');
-        } else if (!systemEntity && supplierEntity) {
-            // System entity not detected, ask the user
-            session.dialogData.searchType = 'System';
-            session.dialogData.supplier = supplierEntity.entity;
-            builder.Prompts.text(session, 'in which system?');
-        } else if (!systemEntity && !supplierEntity) {
-            // no entities detected, ask user for inputs
-            session.dialogData.searchType = 'Supplier-n-System';
-            builder.Prompts.text(session, 'Please enter supplier name and system name...');
-        } else {
-            // Both the entities are present. Go to the next step
-            next({ response: [systemEntity.entity, supplierEntity.entity], next: next });
+        if(!session.privateConversationData.hasOwnProperty('vendorParams')){
+            session.privateConversationData.vendorParams = {};
+            session.privateConversationData.vendorParams.System = builder.EntityRecognizer.findEntity(args.intent.entities, 'System').entity;
+            session.privateConversationData.vendorParams.Supplier = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier').entity;
+            session.privateConversationData.vendorParams.Location = builder.EntityRecognizer.findEntity(args.intent.entities, 'Location').entity;
         }
+
+        if(!session.privateConversationData.vendorParams.hasOwnProperty('Supplier'))
+            builder.Prompts.text(session, 'Which supplier / vendor do you want to know about?');
+        else
+            next();
+
     },
     function (session, results, next) {
-        console.log("Response: ", results.response);
+        session.sendTyping();
 
-        switch(session.dialogData.searchType){
-            case "Supplier":
-                next({ response: [session.dialogData.system, results.response] });
-            break;
-            case "System":
-                next({ response: [results.response, session.dialogData.supplier] });
-            break;
-            case "Supplier-n-System":
-                console.log("Response for supplier and system ----**######***--->", results.response);
-                next({ response: ["Poppulo", "SAP"] });
-            break;
-            default:
-                next({ response: results.response });
-            break;
+        console.log("### User reply for the Supplier query: ", results);
 
+        if(results.hasOwnProperty('response')){
+            session.privateConversationData.vendorParams.Supplier = results.response;
         }
+
+        if(!session.privateConversationData.vendorParams.hasOwnProperty('System'))
+            builder.Prompts.text(session, 'in which system?');
+        else
+            next();
+
     },
     function (session, results) {
-        var system = results.response[0];
-        var supplier = results.response[1];
+        session.sendTyping();
 
-        var message = 'Looking for the setup...';
+        console.log("### User reply for the System query: ", results);
 
-        console.log("results: --------> ", results);
+        if(results.hasOwnProperty('response')){
+            session.privateConversationData.vendorParams.System = results.response;
+        }
 
-        session.send(message);
+        var systemEntity = session.privateConversationData.vendorParams.System
+        var supplierEntity = session.privateConversationData.vendorParams.Supplier
+        var locationEntity = session.privateConversationData.vendorParams.Location
+        var availableCountries = [];
+        
+        axios.post('http://10.138.89.49', {"system": systemEntity, "supplier": supplierEntity})
+        .then(function (response) {
+            console.log(response);
+            session.send("Here you go! " + response);
+            availableCountries = response.location;
+        })
+        .catch(function (error) {
+            console.log("===========********========= ERROR ===========********=========", error);
+        });
 
-        var setup = Math.random() >= 0.5;
+        if(!session.privateConversationData.vendorParams.hasOwnProperty('Location')){
+            // list all the available countries
+            session.send("Yes! The setup is avilable for " + response);
+        }
+        else{
+            
+            // check for System, Supplier and Location
+            if (locationEntity in response.location){
+                session.send("Yes");
+            }else{
+                session.send("Sorry. Not available.");
+            }
+            
+        }
 
-        if(setup)
-            message = "Yes! Setup has been identified."
-        else
-            message = "There is no setup in " + system + " for " + supplier;
-        // Async search
-        // Store
-        //     .searchHotels(destination)
-        //     .then(function (hotels) {
-        //         // args
-        //         session.send('I found %d hotels:', hotels.length);
-
-        //         var message = new builder.Message()
-        //             .attachmentLayout(builder.AttachmentLayout.carousel)
-        //             .attachments(hotels.map(hotelAsAttachment));
-
-        //         session.send(message);
-
-        //         // End
-        //         session.endDialog();
-        //     });
-        session.send(message);
-        session.endDialog();
     }
 ]).triggerAction({
     matches: 'Vendor Availability',
@@ -227,8 +311,9 @@ bot.dialog('Help', [
     function (session) {
         builder.Prompts.choice(session,
             'Try asking me things like:',
-            [VendorStatus, PRForm, POStatus],
+            [VendorStatus, PRForm, EmailQuotes, POStatus],
             { listStyle: builder.ListStyle.button });
+        session.endDialog();
     },
     function (session, result) {
         if (result.response) {
@@ -238,14 +323,11 @@ bot.dialog('Help', [
                     session.reset();
                     break;
                 case VendorStatus:
-                    session.beginDialog('Vendor Availability');
+                    session.beginDialog('Vendor Availability', result);
                     break;
                 case PRForm:
                     session.send('This functionality is not yet implemented! Try resetting your password.');
                     session.reset();
-                    break;
-                case VendorStatus:
-                    session.beginDialog('Help');
                     break;
             }
         } else {
@@ -257,20 +339,29 @@ bot.dialog('Help', [
             session.send('I\'m corn-fused! 🤔 Can you please ask that again?');
             builder.Prompts.choice(session,
                 'I can help you with queries regarding the PR form.',
-                [VendorStatus, PRForm, POStatus],
+                [VendorStatus, PRForm, POStatus, EmailQuotes],
                 { listStyle: builder.ListStyle.button });
             session.reset();
         }
     }
 ]).triggerAction({
-    matches: 'Help'
+    matches: /^help$/i
 });
 
 bot.dialog('Greeting', function (session) {
     session.send('Hi. I\'m a bot. I can help you with queries regarding the PR form.');
     session.beginDialog('Help');
 }).triggerAction({
-    matches: 'Greeting'
+    matches: /^greeting$/i
+});
+
+bot.dialog('PO Status', function (session) {
+    PO_Statuses = ['pending with the vendor.', 'pending with the purchase team.', 'approved!'];
+    var POStatus = PO_Statuses[Math.floor(Math.random() * PO_Statuses.length)];
+    session.send('It is ' + POStatus);
+    session.endDialog();
+}).triggerAction({
+    matches: 'PO Status'
 });
 
 // Spell Check
