@@ -20,18 +20,29 @@ var connector = new builder.ChatConnector({
 server.post('/api/messages', connector.listen());
 
 var bot = new builder.UniversalBot(connector, function (session) {
-    session.send('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
+    // clearTimeout(busyTimer);
+    session.endDialog('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
 });
 
 // You can provide your own model by specifing the 'LUIS_MODEL_URL' environment variable
 // This Url can be obtained by uploading or creating your model from the LUIS portal: https://www.luis.ai/
 var recognizer = new builder.LuisRecognizer(process.env.LUIS_MODEL_URL);
 bot.recognizer(recognizer);
+bot.use({
+    botbuilder: function (session, next) {
+        session.send(); // it doesn't work without this..
+        session.sendTyping();
+        next();
+    }
+    // send: function (event, next) {
+    //     myMiddleware.logOutgoingMessage(event, next);
+    // }
+});
 
 const PRForm = 'I need information on PR Form';
-const POStatus = 'What is the status of P0 for PR396316';
+const POStatus = 'PR Status';
 const EmailQuotes = 'Do we accept email quotes from suppliers?';
-const VendorStatus = 'Can you tell me if the supplier Poppulo is set up in SAP for NL location?';
+const VendorStatus = 'Vendor Availablity';
 const Help = 'Help';
 var firstMessage = true;
 
@@ -70,7 +81,22 @@ bot.on('conversationUpdate', (message) => {
         firstMessage = false;
     }
 });
-
+// var firstMessage = true;
+// var busyTimer;
+// bot.on('conversationUpdate', (message) => {
+//     if (message.membersAdded && firstMessage){
+//         const hello = new builder.Message()
+//             .address(message.address)
+//             .text("Hello! Welcome to the considerate bot...");
+//         bot.send(hello);
+//         busyTimer = setTimeout(() => {
+//             bot.send(new builder.Message()
+//                 .address(message.address)
+//                 .text("oops you are busy bye bye!"));
+//         }, 10000);
+//         firstMessage = false;
+//     }
+// });
 // const request = require('request');
 
 // request.get({
@@ -227,78 +253,113 @@ bot.on('conversationUpdate', (message) => {
 //         session.send('Please provide supplier name and system name');
 //     }
 // });
-
+var vendorParams = {};
+var availableSystems = ['ariba', 'sap', 'unix'];
+var availableSuppliers = ['poppulo', 'ibm', 'tcs', 'amazon'];
 bot.dialog('Vendor Availability', [
     function (session, args, next) {
-        session.sendTyping();
+
+        var systemEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'System');
+        var supplierEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier');
+        var locationEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Location');
+        vendorParams = session.privateConversationData.vendorParams;
 
         if(!session.privateConversationData.hasOwnProperty('vendorParams')){
-            session.privateConversationData.vendorParams = {};
-            session.privateConversationData.vendorParams.System = builder.EntityRecognizer.findEntity(args.intent.entities, 'System').entity;
-            session.privateConversationData.vendorParams.Supplier = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier').entity;
-            session.privateConversationData.vendorParams.Location = builder.EntityRecognizer.findEntity(args.intent.entities, 'Location').entity;
+            vendorParams = {};
+            if(systemEntity !== null) vendorParams.System = systemEntity.entity;
+            if(supplierEntity !== null) vendorParams.Supplier = supplierEntity.entity;
+            if(locationEntity !== null) vendorParams.Location = locationEntity.entity;
+        }else{
+            if(vendorParams.hasOwnProperty('System') && vendorParams.System !== null)
+                systemEntity = vendorParams.System
+            else
+                systemEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'System');
+            if(vendorParams.hasOwnProperty('Supplier') && vendorParams.Supplier !== null)
+                supplierEntity = vendorParams.Supplier
+            else
+                supplierEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier');
+            if(vendorParams.hasOwnProperty('Location') && vendorParams.Location !== null)
+                locationEntity = vendorParams.Location;
+            else
+                locationEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Location');
         }
 
-        if(!session.privateConversationData.vendorParams.hasOwnProperty('Supplier'))
+        if(!vendorParams.hasOwnProperty('Supplier'))
             builder.Prompts.text(session, 'Which supplier / vendor do you want to know about?');
         else
             next();
 
     },
     function (session, results, next) {
-        session.sendTyping();
 
         console.log("### User reply for the Supplier query: ", results);
 
         if(results.hasOwnProperty('response')){
-            session.privateConversationData.vendorParams.Supplier = results.response;
+            vendorParams.Supplier = results.response;
+            if(!results.response in availableSuppliers) next({ resumed: builder.ResumeReason.back })
         }
 
-        if(!session.privateConversationData.vendorParams.hasOwnProperty('System'))
+        if(!vendorParams.hasOwnProperty('System'))
             builder.Prompts.text(session, 'in which system?');
         else
             next();
 
     },
     function (session, results) {
-        session.sendTyping();
 
         console.log("### User reply for the System query: ", results);
 
         if(results.hasOwnProperty('response')){
-            session.privateConversationData.vendorParams.System = results.response;
+            vendorParams.System = results.response;
+
+            // if the system is registered proceed, else go back.
+            if(!results.response in availableSystems) next({ resumed: builder.ResumeReason.back });
         }
 
-        var systemEntity = session.privateConversationData.vendorParams.System
-        var supplierEntity = session.privateConversationData.vendorParams.Supplier
-        var locationEntity = session.privateConversationData.vendorParams.Location
+        var systemEntity = vendorParams.System
+        var supplierEntity = vendorParams.Supplier
+        var locationEntity = vendorParams.Location
         var availableCountries = [];
         
-        axios.post('http://10.138.89.49', {"system": systemEntity, "supplier": supplierEntity})
-        .then(function (response) {
-            console.log(response);
-            session.send("Here you go! " + response);
-            availableCountries = response.location;
-        })
-        .catch(function (error) {
-            console.log("===========********========= ERROR ===========********=========", error);
-        });
+        session.sendTyping();
+        // axios.post('http://10.138.89.49:8080/getdata', {"system": systemEntity, "supplier": supplierEntity})
+        // .then(function (response) {
+        //     console.log(response);
+        //     session.send("Here you go! " + response);
+        //     availableCountries = response.location;
 
-        if(!session.privateConversationData.vendorParams.hasOwnProperty('Location')){
-            // list all the available countries
-            session.send("Yes! The setup is avilable for " + response);
+        //     if(vendorParams.hasOwnProperty('Location')  && vendorParams.Location !== null){
+        //         // check for System, Supplier and Location
+        //         if (locationEntity in availableCountries){
+        //             session.send("Yes");
+        //         }else{
+        //             session.send("Sorry. We have the setup only for " + availableCountries);
+        //         }
+        //     }
+        //     else{
+        //         // list all the available countries
+        //         session.send("Yes! The setup is avilable for " + availableCountries);                
+        //     }
+    
+        //     session.endDialog();
+        // })
+        // .catch(function (error) {
+        //     // console.log("===========********========= ERROR ===========********=========", error);
+        //     session.endDialog("REST Server is not available! Please come back later.");
+        // });
+
+        if(vendorParams.hasOwnProperty('Location')  && vendorParams.Location !== null){
+            // check for System, Supplier and Location
+            if (locationEntity in availableCountries){
+                session.endDialog("Yes");
+            }else{
+                session.endDialog("Sorry. We have the setup only for " + availableCountries);
+            }
         }
         else{
-            
-            // check for System, Supplier and Location
-            if (locationEntity in response.location){
-                session.send("Yes");
-            }else{
-                session.send("Sorry. Not available.");
-            }
-            
+            // list all the available countries
+            session.endDialog("Yes! The setup is avilable!" + availableCountries);                
         }
-
     }
 ]).triggerAction({
     matches: 'Vendor Availability',
@@ -310,7 +371,7 @@ bot.dialog('Vendor Availability', [
 bot.dialog('Help', [
     function (session) {
         builder.Prompts.choice(session,
-            'Try asking me things like:',
+            'How can I assist you?',
             [VendorStatus, PRForm, EmailQuotes, POStatus],
             { listStyle: builder.ListStyle.button });
         session.endDialog();
@@ -345,22 +406,33 @@ bot.dialog('Help', [
         }
     }
 ]).triggerAction({
-    matches: /^help$/i
+    matches: 'Help'
 });
 
 bot.dialog('Greeting', function (session) {
     session.send('Hi. I\'m a bot. I can help you with queries regarding the PR form.');
     session.beginDialog('Help');
 }).triggerAction({
-    matches: /^greeting$/i
+    matches: 'Greeting'
 });
 
-bot.dialog('PO Status', function (session) {
-    PO_Statuses = ['pending with the vendor.', 'pending with the purchase team.', 'approved!'];
-    var POStatus = PO_Statuses[Math.floor(Math.random() * PO_Statuses.length)];
-    session.send('It is ' + POStatus);
-    session.endDialog();
-}).triggerAction({
+bot.dialog('PO Status', [
+    function (session, args, next) {
+        var PREntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'PR Number');
+        if(session.privateConversationData.hasOwnProperty('PREntity') && session.privateConversationData.PREntity !== null){
+            next();
+        }else{
+            if(PREntity !== null) next({ response: PREntity.entity });
+            else builder.Prompts.text(session, 'What is the PR number?');
+        }
+    },
+    function (session, results) {
+        PO_Statuses = ['pending with the vendor.', 'pending with the purchase team.', 'approved!', 'awaiting renee glenn approval.'];
+        var POStatus = PO_Statuses[Math.floor(Math.random() * PO_Statuses.length)];
+        session.send(results.response + ' is ' + POStatus);
+        session.endDialog();
+    }
+]).triggerAction({
     matches: 'PO Status'
 });
 
@@ -381,6 +453,17 @@ if (process.env.IS_SPELL_CORRECTION_ENABLED === 'true') {
         }
     });
 }
+
+const acceptEmailQuotes = true;
+bot.dialog('Email Quote', function (session) {
+    if(acceptEmailQuotes)
+        session.send('Yes. We accept email quotes.');
+    else
+        session.send('No. We don\'t accept email quotes.');
+    session.endDialog();
+}).triggerAction({
+    matches: 'Email Quote'
+});
 
 // Helpers
 function hotelAsAttachment(hotel) {
