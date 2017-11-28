@@ -416,6 +416,17 @@ bot.dialog('Greeting', function (session) {
     matches: 'Greeting'
 });
 
+const acceptEmailQuotes = true;
+bot.dialog('Email Quote', function (session) {
+    if(acceptEmailQuotes)
+        session.send('Yes. We accept email quotes.');
+    else
+        session.send('No. We don\'t accept email quotes.');
+    session.endDialog();
+}).triggerAction({
+    matches: 'Email Quote'
+});
+
 bot.dialog('PO Status', [
     function (session, args, next) {
         var PREntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'PR Number');
@@ -453,17 +464,6 @@ if (process.env.IS_SPELL_CORRECTION_ENABLED === 'true') {
         }
     });
 }
-
-const acceptEmailQuotes = true;
-bot.dialog('Email Quote', function (session) {
-    if(acceptEmailQuotes)
-        session.send('Yes. We accept email quotes.');
-    else
-        session.send('No. We don\'t accept email quotes.');
-    session.endDialog();
-}).triggerAction({
-    matches: 'Email Quote'
-});
 
 // Helpers
 function hotelAsAttachment(hotel) {
