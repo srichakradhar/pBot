@@ -39,9 +39,9 @@ bot.use({
     // }
 });
 
-const PRForm = 'I need information on PR Form';
+// const PRForm = 'I need information on PR Form';
 const POStatus = 'PR Status';
-const EmailQuotes = 'Do we accept email quotes from suppliers?';
+const EmailQuotes = 'Email Quotes';
 const VendorStatus = 'Vendor Availablity';
 const Help = 'Help';
 var firstMessage = true;
@@ -372,7 +372,7 @@ bot.dialog('Help', [
     function (session) {
         builder.Prompts.choice(session,
             'How can I assist you?',
-            [VendorStatus, PRForm, EmailQuotes, POStatus],
+            [VendorStatus, EmailQuotes, POStatus],
             { listStyle: builder.ListStyle.button });
         session.endDialog();
     },
@@ -400,7 +400,7 @@ bot.dialog('Help', [
             session.send('I\'m corn-fused! 🤔 Can you please ask that again?');
             builder.Prompts.choice(session,
                 'I can help you with queries regarding the PR form.',
-                [VendorStatus, PRForm, POStatus, EmailQuotes],
+                [VendorStatus, POStatus, EmailQuotes],
                 { listStyle: builder.ListStyle.button });
             session.reset();
         }
