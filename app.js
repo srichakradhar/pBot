@@ -12,6 +12,7 @@ var server = restify.createServer();
 server.listen(process.env.port || process.env.PORT || 3978, function () {
     console.log('%s listening to %s', server.name, server.url);
 });
+
 // Create connector and listen for messages
 var connector = new builder.ChatConnector({
     appId: process.env.MICROSOFT_APP_ID,
@@ -43,8 +44,13 @@ bot.use({
 const POStatus = 'PR Status';
 const EmailQuotes = 'Email Quotes';
 const VendorStatus = 'Vendor Availablity';
+const VendorIDLookup = 'Vendor ID lookup';
+const VendorNameLookup = 'Vendor Name lookup';
+const LatestPRForm = 'Latest PR Form';
 const Help = 'Help';
 var firstMessage = true;
+var firstConversationUpdate = true;
+const runningLocally = false;
 
 // Create a custom prompt
 var prompt = new builder.Prompt({ defaultRetryPrompt: "I'm sorry. I didn't recognize your search." })
@@ -72,13 +78,13 @@ builder.Prompts.myLuisPrompt = function (session, prompt, options) {
 }
 
 bot.on('conversationUpdate', (message) => {
-    if (message.membersAdded && firstMessage) {
-        const hello = new builder.Message()
-            .address(message.address)
-            .text("Hello! Welcome to the Purchase Helper Bot.");
-        bot.send(hello);
-        bot.beginDialog(message.address, 'Help');
-        firstMessage = false;
+    if (message.membersAdded && firstConversationUpdate) {
+        // const hello = new builder.Message()
+        //     .address(message.address)
+        //     .text("Hello! Welcome to the Purchase Helper Bot.");
+        // bot.send(hello);
+        bot.beginDialog(message.address, 'Greeting');
+        firstConversationUpdate = false;
     }
 });
 // var firstMessage = true;
@@ -290,21 +296,23 @@ bot.dialog('Vendor Availability', [
             next();
 
     },
-    function (session, results, next) {
+    // function (session, results, next) {
 
-        console.log("### User reply for the Supplier query: ", results);
+    //     console.log("### User reply for the Supplier query: ", results);
 
-        if(results.hasOwnProperty('response')){
-            vendorParams.Supplier = results.response;
-            if(!results.response in availableSuppliers) next({ resumed: builder.ResumeReason.back })
-        }
+    //     if(results.hasOwnProperty('response')){
+    //         vendorParams.Supplier = results.response;
+    //         if(!results.response in availableSuppliers) next({ resumed: builder.ResumeReason.back })
+    //     }
 
-        if(!vendorParams.hasOwnProperty('System'))
-            builder.Prompts.text(session, 'in which system?');
-        else
-            next();
+    //     if(!vendorParams.hasOwnProperty('System'))
+    //         builder.Prompts.choice(session, 'in which system?',
+    //                             ["Ariba", "mySupply"],
+    //                             { listStyle: builder.ListStyle.button });
+    //     else
+    //         next();
 
-    },
+    // },
     function (session, results) {
 
         console.log("### User reply for the System query: ", results);
@@ -319,46 +327,52 @@ bot.dialog('Vendor Availability', [
         var systemEntity = vendorParams.System
         var supplierEntity = vendorParams.Supplier
         var locationEntity = vendorParams.Location
-        var availableCountries = [];
+        var availableCountries = ['in', 'us', 'uk'];
         
         session.sendTyping();
-        // axios.post('http://10.138.89.49:8080/getdata', {"system": systemEntity, "supplier": supplierEntity})
-        // .then(function (response) {
-        //     console.log(response);
-        //     session.send("Here you go! " + response);
-        //     availableCountries = response.location;
+        if(runningLocally){
+            axios.post('http://10.138.89.49:8080/chatbot/getdata', {"system": systemEntity.entity, "supplier": "poppulo"})
+            .then(function (response) {
+                console.log(response);
+                session.send("Here you go! " + response);
+                availableCountries = response.countries;
 
-        //     if(vendorParams.hasOwnProperty('Location')  && vendorParams.Location !== null){
-        //         // check for System, Supplier and Location
-        //         if (locationEntity in availableCountries){
-        //             session.send("Yes");
-        //         }else{
-        //             session.send("Sorry. We have the setup only for " + availableCountries);
-        //         }
-        //     }
-        //     else{
-        //         // list all the available countries
-        //         session.send("Yes! The setup is avilable for " + availableCountries);                
-        //     }
-    
-        //     session.endDialog();
-        // })
-        // .catch(function (error) {
-        //     // console.log("===========********========= ERROR ===========********=========", error);
-        //     session.endDialog("REST Server is not available! Please come back later.");
-        // });
-
-        if(vendorParams.hasOwnProperty('Location')  && vendorParams.Location !== null){
-            // check for System, Supplier and Location
-            if (locationEntity in availableCountries){
-                session.endDialog("Yes");
-            }else{
-                session.endDialog("Sorry. We have the setup only for " + availableCountries);
+                if(vendorParams.hasOwnProperty('Location')  && vendorParams.Location !== null){
+                    // check for System, Supplier and Location
+                    if (locationEntity in availableCountries){
+                        session.send("Yes");
+                    }else{
+                        session.send("Sorry. We have the setup only for " + availableCountries);
+                    }
+                }
+                else{
+                    // list all the available countries
+                    session.send("Yes! We have the supplier " + vendorParams.Supplier + 
+                    " providing services in these countries: " + availableCountries.map(function(x) { return x.toUpperCase(); }));                
+                }
+        
+                session.endDialog();
+            })
+            .catch(function (error) {
+                console.log("===========********========= ERROR ===========********=========", error);
+                session.endDialog("REST Server is not available! Please come back later.");
+            });
+            
+        }else{
+            console.log(vendorParams);
+            if(vendorParams.hasOwnProperty('Location')  && vendorParams.Location !== null){
+                // check for System, Supplier and Location
+                if (locationEntity in availableCountries){
+                    session.endDialog("Yes");
+                }else{
+                    session.endDialog("Sorry. We have the setup only for " + availableCountries.map(function(x) { return x.toUpperCase(); }));
+                }
             }
-        }
-        else{
-            // list all the available countries
-            session.endDialog("Yes! The setup is avilable!" + availableCountries);                
+            else{
+                // list all the available countries
+                session.endDialog("Yes! We have the supplier " + vendorParams.Supplier + 
+                " providing services in these countries: " + availableCountries.map(function(x) { return x.toUpperCase(); }));
+            }
         }
     }
 ]).triggerAction({
@@ -368,11 +382,12 @@ bot.dialog('Vendor Availability', [
     }
 });
 
+var greetings = ['Hi 👋 I can help you with the Purchase Request form related queries.','Hi. I can assist you with the PR Form queries', 'Hi. Ask me your queries on PR Form.', 'Hi. I just finshed my traning. Please go ahead and test me with your PR Form queries.', 'Hi .I\'m Paro the PR bot. Memory 12GB. Speed 2.4GHz. dot.'];
 bot.dialog('Help', [
     function (session) {
         builder.Prompts.choice(session,
-            'How can I assist you?',
-            [VendorStatus, EmailQuotes, POStatus],
+            greetings[Math.floor(Math.random() * greetings.length)],
+            [VendorStatus, EmailQuotes, POStatus, LatestPRForm],
             { listStyle: builder.ListStyle.button });
         session.endDialog();
     },
@@ -386,10 +401,10 @@ bot.dialog('Help', [
                 case VendorStatus:
                     session.beginDialog('Vendor Availability', result);
                     break;
-                case PRForm:
-                    session.send('This functionality is not yet implemented! Try resetting your password.');
-                    session.reset();
-                    break;
+                // case PRForm:
+                //     session.send('This functionality is not yet implemented! Try resetting your password.');
+                //     session.reset();
+                //     break;
             }
         } else {
             session.send('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
@@ -410,8 +425,12 @@ bot.dialog('Help', [
 });
 
 bot.dialog('Greeting', function (session) {
-    session.send('Hi. I\'m a bot. I can help you with queries regarding the PR form.');
-    session.beginDialog('Help');
+    if(!firstMessage)
+        session.beginDialog('Help');
+    else{
+        session.send('Hello there! Good day. I am Paro, the PR helper bot.');
+        firstMessage = false;
+    }
 }).triggerAction({
     matches: 'Greeting'
 });
@@ -445,6 +464,73 @@ bot.dialog('PO Status', [
     }
 ]).triggerAction({
     matches: 'PO Status'
+});
+
+bot.dialog('Latest PR Form', function (session) {
+    session.send("Here is the latest version of the PR Form.");
+    session.endDialog(new builder.Message(session)
+    .addAttachment({
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        contentUrl: 'http://sites.tcs.com/investorsdocs/TCS_Data_Sheet.xlsx',
+        name: 'latest PR Form.xlsx'
+    }));
+}).triggerAction({
+    matches: 'Latest PR Form'
+});
+
+var vendorIDs = {'poppulo': 804147852, 'tcs': 984802354, 'amazon': 94246758, 'ibm': 456873154};
+bot.dialog('Vendor ID Lookup', function (session, args) {
+    vendorID = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier').entity;
+    console.log(vendorID);
+    if(vendorID in vendorIDs)
+        session.endDialog("It is " + vendorIDs[vendorID]);
+    else
+        session.endDialog("Sorry. This vendor is not available in our system. Please make sure you have spelt the vendor name correctly.");
+}).triggerAction({
+    matches: 'Vendor ID Lookup'
+});
+
+bot.dialog('Domain Contact', [
+    function (session, args, next) {
+        fieldEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Field');
+        if(fieldEntity.entity.toLowerCase() == "rff id" || fieldEntity.entity.toLowerCase() == "rffid" )
+            session.send("The RFF ID is associated with the IT Rolling Financial Forecast. Each IT Domain has an RFF. If you are not familiar with the RFF or don't know the correct ID, please work with your Business Manager.");
+        builder.Prompts.choice(session,
+            'To get the you business manager contact, please provide the domain:',
+            ["Cyber Security", "Enterprise IT Solutions & Architechture", "Manufacturing IT Solutions", "Mergers & Aquisitions and OCIO", "R&D IT Solutions", "Infrastrucure IT Solutions"],
+            { listStyle: builder.ListStyle.button });
+        },
+
+    function (session, result) {
+
+        if (result.response) {
+            var contact = '';
+            switch (result.response.entity) {
+                case "Cyber Security":
+                    contact = 'Sylvia Lang';
+                    break;
+                case "Enterprise IT Solutions & Architechture":
+                    contact = 'Cindy Mays';
+                    break;
+                case "Manufacturing IT Solutions":
+                    contact = 'Michelle Ortiz';
+                    break;
+                case "Mergers & Aquisitions and OCIO":
+                    contact = 'Lynn Buehlr';
+                    break;
+                case "R&D IT Solutions":
+                    contact = 'Sylvia Lang';
+                    break;
+                case "Infrastrucure IT Solutions":
+                    contact = "Gaylene Covarrubias & Lu Ann Summers"
+            }
+            session.endDialog("Please contact " + contact + ".")
+        } else {
+            session.endDialog('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
+        }
+    }
+]).triggerAction({
+    matches: 'Domain Contact'
 });
 
 // Spell Check
