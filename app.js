@@ -43,7 +43,7 @@ bot.use({
 // const PRForm = 'I need information on PR Form';
 const POStatus = 'PR Status';
 const EmailQuotes = 'Email Quotes';
-const VendorStatus = 'Vendor Availablity';
+const VendorStatus = 'Vendor Setup';
 const VendorIDLookup = 'Vendor ID lookup';
 const VendorNameLookup = 'Vendor Name lookup';
 const LatestPRForm = 'Latest PR Form';
@@ -431,6 +431,7 @@ bot.dialog('Greeting', function (session) {
         session.send('Hello there! Good day. I am Paro, the PR helper bot.');
         firstMessage = false;
     }
+    session.endDialog();
 }).triggerAction({
     matches: 'Greeting'
 });
