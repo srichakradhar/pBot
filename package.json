@@ -3,8 +3,6 @@
   "version": "1.0.0",
   "description": "Bot Builder Sample - LUIS",
   "scripts": {
-    "prestart": ". ./.set_proxy_env",
-    "predebug": ". ./.set_proxy_env",
     "start": "sudo -E nodejs app.js",
     "debug": "sudo -E nodejs --debug-brk app.js"
   },

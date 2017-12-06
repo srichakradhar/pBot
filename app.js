@@ -20,15 +20,38 @@ var connector = new builder.ChatConnector({
 });
 server.post('/api/messages', connector.listen());
 
-var bot = new builder.UniversalBot(connector, function (session) {
-    // clearTimeout(busyTimer);
-    session.endDialog('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
-});
+var bot = new builder.UniversalBot(connector);
+// , function (session) {
+//     // clearTimeout(busyTimer);
+//     session.endDialog('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
+// }
 
 // You can provide your own model by specifing the 'LUIS_MODEL_URL' environment variable
 // This Url can be obtained by uploading or creating your model from the LUIS portal: https://www.luis.ai/
 var recognizer = new builder.LuisRecognizer(process.env.LUIS_MODEL_URL);
-bot.recognizer(recognizer);
+// bot.recognizer(recognizer);
+var regExHwRU = new builder.RegExpRecognizer('How are you', /.*how are you.*/i); 
+var regExThx = new builder.RegExpRecognizer('Thank You', /.*thank( you|s).*/i); 
+
+var intents = new builder.IntentDialog({ recognizers: [regExHwRU, regExThx, recognizer], recognizeOrder: 'series' })
+.matches('How are you',(session,args)=>{
+    console.log(args);
+    session.endDialog('Very excited to talk to you! 🙂');
+})
+.matches('Thank You',(session,args)=>{
+    console.log(args);
+    session.endDialog('My Pleasure 😊');
+}).matches('Greeting', 'Greeting')
+.matches('Help', 'Help')
+.matches('Vendor Availability', 'Vendor Availability')
+.matches('Email Quote', 'Email Quote')
+.matches('PO Status', 'PO Status')
+.matches('Latest PR Form', 'Latest PR Form')
+.matches('Vendor ID Lookup', 'Vendor ID Lookup')
+.matches('Domain Contact', 'Domain Contact');
+
+bot.dialog('/', intents).onDefault(session => session.send('no match found'));
+
 bot.use({
     botbuilder: function (session, next) {
         session.send(); // it doesn't work without this..
@@ -428,7 +451,7 @@ bot.dialog('Greeting', function (session) {
     if(!firstMessage)
         session.beginDialog('Help');
     else{
-        session.send('Hello there! Good day. I am Paro, the PR helper bot.');
+        session.endDialog('Hello there! Good day. I am Paro, the PR helper bot.');
         firstMessage = false;
     }
     session.endDialog();
