@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "description": "Bot Builder Sample - LUIS",
   "scripts": {
+<<<<<<< HEAD
+=======
+    "prestart": ". ./.set_proxy_env",
+    "predebug": ". ./.set_proxy_env",
+>>>>>>> b1e34feecd5f065c0cbce5343d1de3fafd1b0007
     "start": "sudo -E nodejs app.js",
     "debug": "sudo -E nodejs --debug-brk app.js"
   },
@@ -22,7 +27,10 @@
     "url": "https://github.com/Microsoft/BotBuilder-Samples.git"
   },
   "dependencies": {
+<<<<<<< HEAD
     "axios": "^0.17.1",
+=======
+>>>>>>> b1e34feecd5f065c0cbce5343d1de3fafd1b0007
     "bluebird": "^3.4.7",
     "botbuilder": "^3.8.2",
     "dotenv-extended": "^1.0.4",
