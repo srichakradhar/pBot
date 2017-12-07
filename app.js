@@ -32,8 +32,13 @@ var recognizer = new builder.LuisRecognizer(process.env.LUIS_MODEL_URL);
 // bot.recognizer(recognizer);
 var regExHwRU = new builder.RegExpRecognizer('How are you', /.*how are you.*/i); 
 var regExThx = new builder.RegExpRecognizer('Thank You', /.*thank( you|s).*/i); 
+var regVendorID = new builder.RegExpRecognizer('Vendor ID Lookup', /.*vendor id lookup.*/i); 
+var regVendorName = new builder.RegExpRecognizer('Vendor Name Lookup', /.*vendor Name lookup.*/i); 
+var regPRPODetails = new builder.RegExpRecognizer('Vendor Name Lookup', /.*pr po details.*/i); 
+var regPODetails = new builder.RegExpRecognizer('Vendor Name Lookup', /.*(?!pr) po details.*/i); 
 
-var intents = new builder.IntentDialog({ recognizers: [regExHwRU, regExThx, recognizer], recognizeOrder: 'series' })
+var intents = new builder.IntentDialog({ recognizers: [regExHwRU, regExThx, regVendorID, regVendorName, regPRPODetails, regPODetails, recognizer],
+    recognizeOrder: 'series' })
 .matches('How are you',(session,args)=>{
     console.log(args);
     session.endDialog('Very excited to talk to you! 🙂');
@@ -48,7 +53,10 @@ var intents = new builder.IntentDialog({ recognizers: [regExHwRU, regExThx, reco
 .matches('PO Status', 'PO Status')
 .matches('Latest PR Form', 'Latest PR Form')
 .matches('Vendor ID Lookup', 'Vendor ID Lookup')
-.matches('Domain Contact', 'Domain Contact');
+.matches('Vendor Name Lookup', 'Vendor Name Lookup')
+.matches('Domain Contact', 'Domain Contact')
+.matches('PR PO Details', 'PR PO Details')
+.matches('PO Details', 'PO Details');
 
 bot.dialog('/', intents).onDefault(session => session.send('no match found'));
 
@@ -66,7 +74,7 @@ bot.use({
 // const PRForm = 'I need information on PR Form';
 const POStatus = 'PR Status';
 const EmailQuotes = 'Email Quotes';
-const VendorStatus = 'Vendor Setup';
+const VendorAvailability = 'Vendor Setup';
 const VendorIDLookup = 'Vendor ID lookup';
 const VendorNameLookup = 'Vendor Name lookup';
 const LatestPRForm = 'Latest PR Form';
@@ -410,7 +418,7 @@ bot.dialog('Help', [
     function (session) {
         builder.Prompts.choice(session,
             greetings[Math.floor(Math.random() * greetings.length)],
-            [VendorStatus, EmailQuotes, POStatus, LatestPRForm],
+            [VendorAvailability, POStatus, LatestPRForm, VendorIDLookup, VendorNameLookup],
             { listStyle: builder.ListStyle.button });
         session.endDialog();
     },
@@ -421,7 +429,7 @@ bot.dialog('Help', [
                     session.send('This functionality is not yet implemented! Try resetting your password.');
                     session.reset();
                     break;
-                case VendorStatus:
+                case VendorAvailability:
                     session.beginDialog('Vendor Availability', result);
                     break;
                 // case PRForm:
@@ -438,7 +446,7 @@ bot.dialog('Help', [
             session.send('I\'m corn-fused! 🤔 Can you please ask that again?');
             builder.Prompts.choice(session,
                 'I can help you with queries regarding the PR form.',
-                [VendorStatus, POStatus, EmailQuotes],
+                [VendorAvailability, POStatus, EmailQuotes],
                 { listStyle: builder.ListStyle.button });
             session.reset();
         }
@@ -472,7 +480,7 @@ bot.dialog('Email Quote', function (session) {
 
 bot.dialog('PO Status', [
     function (session, args, next) {
-        var PREntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'PR Number');
+        var PREntity = builder.EntityRecognizer.findEntity(args.entities, 'PR Number');
         if(session.privateConversationData.hasOwnProperty('PREntity') && session.privateConversationData.PREntity !== null){
             next();
         }else{
@@ -502,21 +510,9 @@ bot.dialog('Latest PR Form', function (session) {
     matches: 'Latest PR Form'
 });
 
-var vendorIDs = {'poppulo': 804147852, 'tcs': 984802354, 'amazon': 94246758, 'ibm': 456873154};
-bot.dialog('Vendor ID Lookup', function (session, args) {
-    vendorID = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier').entity;
-    console.log(vendorID);
-    if(vendorID in vendorIDs)
-        session.endDialog("It is " + vendorIDs[vendorID]);
-    else
-        session.endDialog("Sorry. This vendor is not available in our system. Please make sure you have spelt the vendor name correctly.");
-}).triggerAction({
-    matches: 'Vendor ID Lookup'
-});
-
 bot.dialog('Domain Contact', [
     function (session, args, next) {
-        fieldEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Field');
+        fieldEntity = builder.EntityRecognizer.findEntity(args.entities, 'Field');
         if(fieldEntity.entity.toLowerCase() == "rff id" || fieldEntity.entity.toLowerCase() == "rffid" )
             session.send("The RFF ID is associated with the IT Rolling Financial Forecast. Each IT Domain has an RFF. If you are not familiar with the RFF or don't know the correct ID, please work with your Business Manager.");
         builder.Prompts.choice(session,
@@ -555,6 +551,39 @@ bot.dialog('Domain Contact', [
     }
 ]).triggerAction({
     matches: 'Domain Contact'
+});
+
+var vendorIDs = {'poppulo': 804147852, 'tcs': 984802354, 'amazon': 94246758, 'ibm': 456873154};
+bot.dialog('Vendor ID Lookup', function (session, args) {
+    vendorID = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier').entity;
+    if(vendorID in vendorIDs)
+        session.endDialog("It is " + vendorIDs[vendorID]);
+    else
+        session.endDialog("Sorry. This vendor is not available in our system. Please make sure you have spelt the vendor name correctly.");
+}).triggerAction({
+    matches: 'Vendor ID Lookup'
+});
+
+var vendorNumbers = {804147852: 'poppulo', 984802354: 'tcs', 94246758: 'amazon', 456873154: 'ibm'};
+bot.dialog('Vendor Name Lookup', [ function (session, args, next) {
+    var vendorNumberEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Vendor Number');
+    
+    if(vendorNumberEntity == null)
+        builder.Prompts.text("May I know the Vendor ID please?");
+    else
+        next({response: vendorNumberEntity.entity});
+},
+function (session, results) {
+
+    var vendorNumber = results.response;
+
+    if(vendorNumber in vendorNumbers)
+        session.endDialog("It is " + vendorNumbers[vendorNumber]);
+    else
+        session.endDialog("Sorry. This vendor id is not available in our system. Please make sure you have provided the vendor id correctly.");
+
+}]).triggerAction({
+    matches: 'Vendor Name Lookup'
 });
 
 // Spell Check
