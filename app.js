@@ -565,7 +565,7 @@ bot.dialog('Vendor ID Lookup', function (session, args) {
 
 var vendorNumbers = {804147852: 'poppulo', 984802354: 'tcs', 94246758: 'amazon', 456873154: 'ibm'};
 bot.dialog('Vendor Name Lookup', [ function (session, args, next) {
-    var vendorNumberEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Vendor Number');
+    var vendorNumberEntity = builder.EntityRecognizer.findEntity(args.entities, 'Vendor Number');
     
     if(vendorNumberEntity == null)
         builder.Prompts.text("May I know the Vendor ID please?");
