@@ -29,22 +29,87 @@ var bot = new builder.UniversalBot(connector);
 // This Url can be obtained by uploading or creating your model from the LUIS portal: https://www.luis.ai/
 var recognizer = new builder.LuisRecognizer(process.env.LUIS_MODEL_URL);
 // bot.recognizer(recognizer);
+
+var greetings = ['Hi 👋 I can help you with the Purchase Request form related queries.',
+'Hi. I can assist you with the PR Form queries', 'Hi. Ask me your queries on PR Form.',
+'Hi. I just finshed my traning. Please go ahead and test me with your PR Form queries.',
+'Hi .I\'m Paro the PR bot. 🤖 Speed 2.4GHz. Memory 12GB. dot.'];
+
+var no_match_responses = ['😒 I blame my team mates for not teaching me that!',
+'I wish I understood that! 😞', 'I\'m sorry. But, I am still learning! 😓',
+'I need help in understanding that.. 😕',
+'Maybe I didn\'t understand you properly. Could you please reword your question or type your complete query? 😶',
+'That looks alien 👽 to me.', 'Sorry. I can\'t understand Greek and Latin yet.. 🐐'];
+
+var thank_you_responses = ['Sure. Happy to help ! 😊😌', 'My Pleasure 😊'];
+
+var wassup_responses = ['All good 🙂',
+'Oh nothing much! I’m just putting the final touches on my plan to conquer the world. 🗡️',
+'The direction denoted by Z in 3-D coordinate system', 'Uttar Pradesh', 'Not gravity. I checked!',
+'My I.Q.- Way up. Way higher than one can imagine.. 😉',
+'Everything except my salary.. 😢', 'Pertrol price 😛'];
+
+var hw_u_responses = ['Couldn’t be better! 😌 How can i help you?', 'Excited to talk to you! 🙂'];
+
+var jokes = ['I’m afraid you won’t get my sense of humour.', 'What do you call someone who is super late? Slate.']
 var regExHwRU = new builder.RegExpRecognizer('How are you', /.*how are you.*/i); 
 var regExThx = new builder.RegExpRecognizer('Thank You', /.*thank( you|s).*/i); 
 var regVendorID = new builder.RegExpRecognizer('Vendor ID Lookup', /.*vendor id lookup.*/i); 
 var regVendorName = new builder.RegExpRecognizer('Vendor Name Lookup', /.*vendor Name lookup.*/i); 
 var regPRPODetails = new builder.RegExpRecognizer('Vendor Name Lookup', /.*pr po details.*/i); 
 var regPODetails = new builder.RegExpRecognizer('Vendor Name Lookup', /.*(?!pr) po details.*/i); 
+var regExWhoRU = new builder.RegExpRecognizer('Who are you', /.*who are you|what ?i?'?s your name.*/i); 
+var regExWhoAmI = new builder.RegExpRecognizer('Who am I', /.*who am i.*/i); 
+var regWSup = new builder.RegExpRecognizer('Whatsup', /.*wh?at?'?s ?s?up.*/i);
+var regILU = new builder.RegExpRecognizer('I Love You', /.*i love you.*/i);
+var regULM = new builder.RegExpRecognizer('Love me', /.*you love me.*/i);
+var regExPapa = new builder.RegExpRecognizer('Papa', /.*y?o?ur father.*/i);
+var regExMomma = new builder.RegExpRecognizer('Momma', /.*y?o?ur mo(ther|m).*/i);
+var regExJoke = new builder.RegExpRecognizer('Joke', /.*a joke.*/i);
 
-var intents = new builder.IntentDialog({ recognizers: [regExHwRU, regExThx, regVendorID, regVendorName, regPRPODetails, regPODetails, recognizer],
+var intents = new builder.IntentDialog({ recognizers: [regExHwRU, regExThx, regVendorID,
+    regVendorName, regPRPODetails, regPODetails, regExWhoRU, regExWhoAmI, regWSup, regILU,
+    regULM, regExPapa, regExJoke, recognizer],
     recognizeOrder: 'series' })
 .matches('How are you',(session,args)=>{
     console.log(args);
-    session.endDialog('Very excited to talk to you! 🙂');
+    session.endDialog(hw_u_responses[Math.floor(Math.random() * hw_u_responses.length)]);
 })
 .matches('Thank You',(session,args)=>{
     console.log(args);
-    session.endDialog('My Pleasure 😊');
+    session.endDialog(thank_you_responses[Math.floor(Math.random() * thank_you_responses.length)]);
+})
+.matches('Who are you',(session,args)=>{
+    console.log(args);
+    session.endDialog('I am Paro');
+})
+.matches('Who am I',(session,args)=>{
+    console.log(args);
+    session.endDialog('You are who you are because of what goes into your mind');
+})
+.matches('Whatsup',(session,args)=>{
+    console.log(args);
+    session.endDialog(wassup_responses[Math.floor(Math.random() * wassup_responses.length)]);
+})
+.matches('I Love You',(session,args)=>{
+    console.log(args);
+    session.endDialog('Me too!');
+})
+.matches('Love me',(session,args)=>{
+    console.log(args);
+    session.endDialog('Stop! This is going too fast for me.');
+})
+.matches('Papa',(session,args)=>{
+    console.log(args);
+    session.endDialog('Chakri. Man of the bots.');
+})
+.matches('Momma',(session,args)=>{
+    console.log(args);
+    session.endDialog('Necessity is my mother.');
+})
+.matches('Joke',(session,args)=>{
+    console.log(args);
+    session.endDialog('Chakri. Man of the bots.');
 }).matches('Greeting', 'Greeting')
 .matches('Help', 'Help')
 .matches('Vendor Availability', 'Vendor Availability')
@@ -412,7 +477,6 @@ bot.dialog('Vendor Availability', [
     }
 });
 
-var greetings = ['Hi 👋 I can help you with the Purchase Request form related queries.','Hi. I can assist you with the PR Form queries', 'Hi. Ask me your queries on PR Form.', 'Hi. I just finshed my traning. Please go ahead and test me with your PR Form queries.', 'Hi .I\'m Paro the PR bot. Memory 12GB. Speed 2.4GHz. dot.'];
 bot.dialog('Help', [
     function (session) {
         builder.Prompts.choice(session,
@@ -553,13 +617,24 @@ bot.dialog('Domain Contact', [
 });
 
 var vendorIDs = {'poppulo': 804147852, 'tcs': 984802354, 'amazon': 94246758, 'ibm': 456873154};
-bot.dialog('Vendor ID Lookup', function (session, args) {
-    vendorID = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier').entity;
+bot.dialog('Vendor ID Lookup', [ function (session, args, next) {
+    var vendorIDEntity = builder.EntityRecognizer.findEntity(args.entities, 'Supplier');
+
+    if(vendorIDEntity == null)
+        builder.Prompts.text(session, "May I know the Vendor Name please?");
+    else
+        next({response: vendorIDEntity.entity});
+},
+function (session, results) {
+
+    var vendorID = results.response;
+
     if(vendorID in vendorIDs)
         session.endDialog("It is " + vendorIDs[vendorID]);
     else
         session.endDialog("Sorry. This vendor is not available in our system. Please make sure you have spelt the vendor name correctly.");
-}).triggerAction({
+
+}]).triggerAction({
     matches: 'Vendor ID Lookup'
 });
 
@@ -568,7 +643,7 @@ bot.dialog('Vendor Name Lookup', [ function (session, args, next) {
     var vendorNumberEntity = builder.EntityRecognizer.findEntity(args.entities, 'Vendor Number');
     
     if(vendorNumberEntity == null)
-        builder.Prompts.text("May I know the Vendor ID please?");
+        builder.Prompts.text(session, "May I know the Vendor ID please?");
     else
         next({response: vendorNumberEntity.entity});
 },
