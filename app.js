@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-// Parobot -9e076531-3e20-41a7-9070-c143bef6feff - paqFO093~$gneaVZVUN02!:
+// 2317015f-fa74-4e34-adc7-4d077d14d76a - sihoFE579==rroPCJAE72@:
 // CorrelationID: |yvHDh.1cb93a9e_
 
 // This loads the environment variables from the .env file
@@ -63,7 +62,7 @@ var wassup_responses = ['All good 🙂',
 
 var hw_u_responses = ['Couldn’t be better! 😌 How can i help you?', 'Excited to talk to you! 🙂'];
 
-var jokes = ['I’m afraid you won’t get my sense of humour.', 'What do you call someone who is super late? Slate.']
+var jokes = ['I’m afraid you won’t get my sense of humour.', 'What do you call someone who is super late? ... Slate.']
 var regExHwRU = new builder.RegExpRecognizer('How are you', /.*how are you.*/i); 
 var regExThx = new builder.RegExpRecognizer('Thank You', /.*thank( you|s).*/i); 
 var regVendorID = new builder.RegExpRecognizer('Vendor ID Lookup', /.*vendor id lookup.*/i); 
@@ -121,7 +120,7 @@ var intents = new builder.IntentDialog({ recognizers: [regExHwRU, regExThx, regV
 })
 .matches('Joke',(session,args)=>{
     console.log(args);
-    session.endDialog('Chakri. Man of the bots.');
+    session.endDialog(jokes[Math.floor(Math.random() * jokes.length)]);
 }).matches('Greeting', 'Greeting')
 .matches('Help', 'Help')
 .matches('Vendor Availability', 'Vendor Availability')
@@ -573,25 +572,6 @@ bot.dialog('PO Status', [
     matches: 'PO Status'
 });
 
-bot.dialog('PR PO Details', [
-    function (session, args, next) {
-        var PREntity = builder.EntityRecognizer.findEntity(args.entities, 'PR Number');
-        if(session.privateConversationData.hasOwnProperty('PREntity') && session.privateConversationData.PREntity !== null){
-            next();
-        }else{
-            if(PREntity !== null) next({ response: PREntity.entity });
-            else builder.Prompts.text(session, 'What is the PR number?');
-        }
-    },
-    function (session, results) {
-        PR_POs = ['132489656', '8008484565', '3546845125', '9548868452'];
-        session.send(PR_POs + ' are the POs corresponding to ' + results.response);
-        session.endDialog();
-    }
-]).triggerAction({
-    matches: 'PR PO Details'
-});
-
 bot.dialog('Latest PR Form', function (session) {
     session.send("Here is the latest version of the PR Form.");
     session.endDialog(new builder.Message(session)
@@ -729,39 +709,3 @@ function reviewAsAttachment(review) {
         .text(review.text)
         .images([new builder.CardImage().url(review.image)]);
 }
-=======
-/*-----------------------------------------------------------------------------
-A simple echo bot for the Microsoft Bot Framework. 
------------------------------------------------------------------------------*/
-
-var restify = require('restify');
-var builder = require('botbuilder');
-
-// Setup Restify Server
-var server = restify.createServer();
-server.listen(process.env.port || process.env.PORT || 3978, function () {
-   console.log('%s listening to %s', server.name, server.url); 
-});
-  
-// Create chat connector for communicating with the Bot Framework Service
-var connector = new builder.ChatConnector({
-    appId: process.env.MicrosoftAppId,
-    appPassword: process.env.MicrosoftAppPassword,
-    stateEndpoint: process.env.BotStateEndpoint,
-    openIdMetadata: process.env.BotOpenIdMetadata 
-});
-
-// Listen for messages from users 
-server.post('/api/messages', connector.listen());
-
-/*----------------------------------------------------------------------------------------
-* Bot Storage: This is a great spot to register the private state storage for your bot. 
-* We provide adapters for Azure Table, CosmosDb, SQL Azure, or you can implement your own!
-* For samples and documentation, see: https://github.com/Microsoft/BotBuilder-Azure
-* ---------------------------------------------------------------------------------------- */
-
-// Create your bot with a function to receive messages from the user
-var bot = new builder.UniversalBot(connector, function (session) {
-    session.send("You said: %s", session.message.text);
-});
->>>>>>> 4cb74bcd7f14d90aba8c3da00c0069a88ebb679e
