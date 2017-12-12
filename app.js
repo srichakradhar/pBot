@@ -573,6 +573,25 @@ bot.dialog('PO Status', [
     matches: 'PO Status'
 });
 
+bot.dialog('PR PO Details', [
+    function (session, args, next) {
+        var PREntity = builder.EntityRecognizer.findEntity(args.entities, 'PR Number');
+        if(session.privateConversationData.hasOwnProperty('PREntity') && session.privateConversationData.PREntity !== null){
+            next();
+        }else{
+            if(PREntity !== null) next({ response: PREntity.entity });
+            else builder.Prompts.text(session, 'What is the PR number?');
+        }
+    },
+    function (session, results) {
+        PR_POs = ['132489656', '8008484565', '3546845125', '9548868452'];
+        session.send(PR_POs + ' are the POs corresponding to ' + results.response);
+        session.endDialog();
+    }
+]).triggerAction({
+    matches: 'PR PO Details'
+});
+
 bot.dialog('Latest PR Form', function (session) {
     session.send("Here is the latest version of the PR Form.");
     session.endDialog(new builder.Message(session)
