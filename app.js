@@ -1,3 +1,6 @@
+// Parobot -9e076531-3e20-41a7-9070-c143bef6feff - paqFO093~$gneaVZVUN02!:
+// CorrelationID: |yvHDh.1cb93a9e_
+
 // This loads the environment variables from the .env file
 require('dotenv-extended').load();
 
@@ -6,6 +9,7 @@ var restify = require('restify');
 var Store = require('./store');
 var spellService = require('./spell-service');
 var axios = require('axios');
+var cognitiveservices = require('botbuilder-cognitiveservices');
 
 // Setup Restify Server
 var server = restify.createServer();
@@ -29,6 +33,13 @@ var bot = new builder.UniversalBot(connector);
 // This Url can be obtained by uploading or creating your model from the LUIS portal: https://www.luis.ai/
 var recognizer = new builder.LuisRecognizer(process.env.LUIS_MODEL_URL);
 // bot.recognizer(recognizer);
+
+var qnarecognizer = new cognitiveservices.QnAMakerRecognizer({
+	// knowledgeBaseId: process.env.QNA_ID, 
+    // subscriptionKey: process.env.QNA_KEY,
+    knowledgeBaseId: '134c4c94-1f92-491f-bdf2-f08b68c193b4', 
+	subscriptionKey: 'e9b45e73efe94daaa4cc04dc72ab1588',
+    top: 4});
 
 var greetings = ['Hi 👋 I can help you with the Purchase Request form related queries.',
 'Hi. I can assist you with the PR Form queries', 'Hi. Ask me your queries on PR Form.',
@@ -122,7 +133,7 @@ var intents = new builder.IntentDialog({ recognizers: [regExHwRU, regExThx, regV
 .matches('PR PO Details', 'PR PO Details')
 .matches('PO Details', 'PO Details');
 
-bot.dialog('/', intents).onDefault(session => session.send('no match found'));
+bot.dialog('/', intents).onDefault(session => session.endDialog('no match found'));
 
 bot.use({
     botbuilder: function (session, next) {
