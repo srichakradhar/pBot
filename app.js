@@ -41,10 +41,12 @@ var qnarecognizer = new cognitiveservices.QnAMakerRecognizer({
 	subscriptionKey: 'e9b45e73efe94daaa4cc04dc72ab1588',
     top: 4});
 
-var greetings = ['Hi 👋 I can help you with the Purchase Request form related queries.',
-'Hi. I can assist you with the PR Form queries', 'Hi. Ask me your queries on PR Form.',
-'Hi. I just finshed my traning. Please go ahead and test me with your PR Form queries.',
-'Hi .I\'m Paro the PR bot. 🤖 Speed 2.4GHz. Memory 12GB. dot.'];
+// var greetings = ['Hi 👋 I can help you with the Purchase Request form related queries.',
+// 'Hi. I can assist you with the PR Form queries', 'Hi. Ask me your queries on PR Form.',
+// 'Hi. I just finshed my training. Please go ahead and test me with your PR Form queries.',
+// 'Hi .I\'m Paro the PR bot. 🤖 Speed 2.4GHz. Memory 12GB. dot.'];
+
+var greetings = ['Hi 👋 Hi .I\'m Paro the PR bot. 🤖 Speed 2.4GHz. Memory 12GB. dot. I can help you with...']
 
 var no_match_responses = ['😒 I blame my team mates for not teaching me that!',
 'I wish I understood that! 😞', 'I\'m sorry. But, I am still learning! 😓',
@@ -371,9 +373,9 @@ var availableSuppliers = ['poppulo', 'ibm', 'tcs', 'amazon'];
 bot.dialog('Vendor Availability', [
     function (session, args, next) {
 
-        var systemEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'System');
-        var supplierEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Supplier');
-        var locationEntity = builder.EntityRecognizer.findEntity(args.intent.entities, 'Location');
+        var systemEntity = builder.EntityRecognizer.findEntity(args.entities, 'System');
+        var supplierEntity = builder.EntityRecognizer.findEntity(args.entities, 'Supplier');
+        var locationEntity = builder.EntityRecognizer.findEntity(args.entities, 'Location');
         vendorParams = session.privateConversationData.vendorParams;
 
         if(!session.privateConversationData.hasOwnProperty('vendorParams')){
@@ -424,7 +426,9 @@ bot.dialog('Vendor Availability', [
         console.log("### User reply for the System query: ", results);
 
         if(results.hasOwnProperty('response')){
-            vendorParams.System = results.response;
+            // 3 steps vendorParams.System = results.response;
+            // for 2 steps
+            vendorParams.Supplier = results.response;
 
             // if the system is registered proceed, else go back.
             if(!results.response in availableSystems) next({ resumed: builder.ResumeReason.back });
@@ -496,35 +500,35 @@ bot.dialog('Help', [
             { listStyle: builder.ListStyle.button });
         session.endDialog();
     },
-    function (session, result) {
-        if (result.response) {
-            switch (result.response.entity) {
-                case POStatus:
-                    session.send('This functionality is not yet implemented! Try resetting your password.');
-                    session.reset();
-                    break;
-                case VendorAvailability:
-                    session.beginDialog('Vendor Availability', result);
-                    break;
-                // case PRForm:
-                //     session.send('This functionality is not yet implemented! Try resetting your password.');
-                //     session.reset();
-                //     break;
-            }
-        } else {
-            session.send('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
-        }
-    },
-    function (session, result) {
-        if (result.resume) {
-            session.send('I\'m corn-fused! 🤔 Can you please ask that again?');
-            builder.Prompts.choice(session,
-                'I can help you with queries regarding the PR form.',
-                [VendorAvailability, POStatus, EmailQuotes],
-                { listStyle: builder.ListStyle.button });
-            session.reset();
-        }
-    }
+    // function (session, result) {
+    //     if (result.response) {
+    //         switch (result.response.entity) {
+    //             case POStatus:
+    //                 session.send('This functionality is not yet implemented! Try resetting your password.');
+    //                 session.reset();
+    //                 break;
+    //             case VendorAvailability:
+    //                 session.beginDialog('Vendor Availability', result);
+    //                 break;
+    //             // case PRForm:
+    //             //     session.send('This functionality is not yet implemented! Try resetting your password.');
+    //             //     session.reset();
+    //             //     break;
+    //         }
+    //     } else {
+    //         session.send('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
+    //     }
+    // },
+    // function (session, result) {
+    //     if (result.resume) {
+    //         session.send('I\'m corn-fused! 🤔 Can you please ask that again?');
+    //         builder.Prompts.choice(session,
+    //             'I can help you with queries regarding the PR form.',
+    //             [VendorAvailability, POStatus, EmailQuotes],
+    //             { listStyle: builder.ListStyle.button });
+    //         session.reset();
+    //     }
+    // }
 ]).triggerAction({
     matches: 'Help'
 });
@@ -563,7 +567,8 @@ bot.dialog('PO Status', [
         }
     },
     function (session, results) {
-        PO_Statuses = ['pending with the vendor.', 'pending with the purchase team.', 'approved!', 'awaiting renee glenn approval.'];
+        // PO_Statuses = ['pending with the vendor.', 'pending with the purchase team.', 'approved!', 'awaiting renee glenn approval.'];
+        PO_Statuses = ['pending with the purchase team for Renee Glenn\'s approval'];
         var POStatus = PO_Statuses[Math.floor(Math.random() * PO_Statuses.length)];
         session.send(results.response + ' is ' + POStatus);
         session.endDialog();
@@ -598,27 +603,33 @@ bot.dialog('Domain Contact', [
     function (session, result) {
 
         if (result.response) {
-            var contact = '';
+            var contact = '', email = '';
             switch (result.response.entity) {
                 case "Cyber Security":
                     contact = 'Sylvia Lang';
+                    email = "sylvia.lang"
                     break;
                 case "Enterprise IT Solutions & Architechture":
                     contact = 'Cindy Mays';
+                    email = "cindy.mays"
                     break;
                 case "Manufacturing IT Solutions":
                     contact = 'Michelle Ortiz';
+                    email = 'michelle.ortiz'
                     break;
                 case "Mergers & Aquisitions and OCIO":
                     contact = 'Lynn Buehlr';
+                    email = 'lynn.buehlr'
                     break;
                 case "R&D IT Solutions":
                     contact = 'Sylvia Lang';
+                    email = 'sylvia.lang'
                     break;
                 case "Infrastrucure IT Solutions":
                     contact = "Gaylene Covarrubias & Lu Ann Summers"
+                    email = 'gaylene.covarrubias'
             }
-            session.endDialog("Please contact " + contact + ".")
+            session.endDialog("Please contact " + contact + ". Ph: +1425260987 email: " + email + '@compa.ny');
         } else {
             session.endDialog('Sorry, I did not understand \'%s\'. Type \'help\' if you need assistance.', session.message.text);
         }
